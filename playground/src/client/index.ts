@@ -22,6 +22,10 @@ import {
   setupObserver,
   getObserverResult,
 } from './evaluated';
+import fs from 'fs';
+import lighthouse from 'lighthouse';
+import chromeLauncher from 'chrome-launcher';
+
 
 async function setupPage(page: Page) {
   await page.emulate(puppeteer.devices['Pixel 5']!);
@@ -96,6 +100,39 @@ async function createPageAndMeasureLcp({
   }
 }
 
+async function generateLighthouseReport({
+  url, useSxg, certificateSpki,
+}: {
+  url: string,
+  useSxg: boolean,
+  certificateSpki: string,
+}) {
+  const chrome = await chromeLauncher.launch({chromeFlags: [
+    '--headless',
+    `--ignore-certificate-errors-spki-list=${certificateSpki}`,
+  ]});
+  const browser = await puppeteer.connect({browserURL: `http://localhost:${chrome.port}`});
+
+  const options = {logLevel: 'info', output: 'html', onlyCategories: ['performance'], port: chrome.port};
+
+  let runnerResult;
+  if (useSxg) {
+    const page = (await browser.pages())[0]!;
+    await page.goto(`https://localhost:8443/srp/${encodeURIComponent(url)}`);
+    runnerResult = (await lighthouse('https://localhost:8443/sxg/0', options))!;
+  } else {
+    runnerResult = (await lighthouse(url, options))!;
+  }
+
+  const reportHtml = runnerResult.report;
+  fs.writeFileSync(`lhreport-${useSxg ? 'experiment' : 'control'}.html`, reportHtml);
+
+  console.log('Report is done for', runnerResult.lhr.finalUrl);
+  console.log('Performance score was', runnerResult.lhr.categories.performance.score * 100);
+
+  await chrome.kill();
+}
+
 export async function runClient({
   certificateSpki,
   interactivelyInspect,
@@ -107,6 +144,10 @@ export async function runClient({
   repeatTime: number;
   url: string;
 }) {
+  generateLighthouseReport({url, useSxg: false, certificateSpki});
+  generateLighthouseReport({url, useSxg: true, certificateSpki});
+
+  /*
   const browser = await puppeteer.launch({
     devtools: interactivelyInspect,
     args: [`--ignore-certificate-errors-spki-list=${certificateSpki}`],
@@ -139,4 +180,5 @@ export async function runClient({
     }
     await browser.close();
   }
+  */
 }

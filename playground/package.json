@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "main": "dist/index.js",
   "scripts": {
-    "build": "rollup -c --failAfterWarnings rollup.config.js",
+    "build": "rollup -c rollup.config.js",
     "lint": "gts lint"
   },
   "author": "",
@@ -23,6 +23,7 @@
   "dependencies": {
     "commander": "^9.0.0",
     "fastify": "3.27.4",
+    "lighthouse": "9.5.0",
     "node-fetch": "3.2.3",
     "puppeteer": "13.5.1"
   },
