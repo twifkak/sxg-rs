@@ -399,6 +399,12 @@ fn meta_redirect(url: &str, err: Option<String>) -> Result<Response<Body>, http:
 // whether we have successfully parsed the origin URI and whether the client
 // supports SXG.
 async fn handle_or_error(req: Request<Body>) -> Result<Response<Body>, http::Error> {
+    if req.uri().path() == "/" {
+      return Response::builder().header("content-type", "text/html").body(Body::from(&include_bytes!("../test.html")[..]))
+    }
+    if req.uri().path() == "/sw.js" {
+      return Response::builder().header("content-type", "application/javascript").body(Body::from(&include_bytes!("../sw.js")[..]))
+    }
     // TODO: Set outer cache-control headers on error responses (short max-age).
     match parse_request(&req) {
         Ok(parsed) => {
